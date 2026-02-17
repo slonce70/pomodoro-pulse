@@ -58,6 +58,22 @@ Database location:
 - This is single-user local software with no authentication.
 - Updates are manual: download and install a new DMG release.
 
+## Support / Donate
+
+This is an open source project. If you find it useful and want to support development, donations are optional and appreciated:
+
+```text
+https://donatello.to/codebezmezh
+```
+
+## Links
+
+Landing page:
+
+```text
+https://landing-pomodoro.vercel.app/
+```
+
 ## iPhone Remote Control (LAN)
 
 You can optionally control the timer from your iPhone using a local web page served by the desktop app.

@@ -8,11 +8,11 @@ use std::{
     fs,
     io::{Read, Write},
     net::TcpListener,
-    sync::{Mutex, MutexGuard},
     sync::{
         atomic::{AtomicBool, Ordering},
         Arc,
     },
+    sync::{Mutex, MutexGuard},
     thread,
     time::Duration,
 };
@@ -375,11 +375,16 @@ fn save_json_setting<T: Serialize>(conn: &Connection, key: &str, value: &T) -> A
     Ok(())
 }
 
-fn load_json_setting<T: for<'de> Deserialize<'de>>(conn: &Connection, key: &str) -> AppResult<Option<T>> {
+fn load_json_setting<T: for<'de> Deserialize<'de>>(
+    conn: &Connection,
+    key: &str,
+) -> AppResult<Option<T>> {
     let value: Option<String> = conn
-        .query_row("SELECT value FROM settings WHERE key = ?1", params![key], |row| {
-            row.get(0)
-        })
+        .query_row(
+            "SELECT value FROM settings WHERE key = ?1",
+            params![key],
+            |row| row.get(0),
+        )
         .optional()
         .map_err(|e| e.to_string())?;
 
@@ -466,8 +471,16 @@ fn format_seconds(seconds: i64) -> String {
 
 fn update_tray_title(app: &AppHandle, timer: &TimerState) {
     if let Some(tray) = app.tray_by_id(TRAY_ID) {
-        let status = if timer.is_running { "Running" } else { "Paused" };
-        let title = format!("{} {} {status}", timer.phase, format_seconds(timer.remaining_seconds));
+        let status = if timer.is_running {
+            "Running"
+        } else {
+            "Paused"
+        };
+        let title = format!(
+            "{} {} {status}",
+            timer.phase,
+            format_seconds(timer.remaining_seconds)
+        );
         let _ = tray.set_title(Some(&title));
     }
 }
@@ -477,7 +490,12 @@ fn emit_timer_state(app: &AppHandle, timer: &TimerState) {
     update_tray_title(app, timer);
 }
 
-fn record_session(conn: &Connection, timer: &TimerState, completed: bool, ended_at: i64) -> AppResult<SessionRecord> {
+fn record_session(
+    conn: &Connection,
+    timer: &TimerState,
+    completed: bool,
+    ended_at: i64,
+) -> AppResult<SessionRecord> {
     let elapsed = if completed {
         timer.phase_total_seconds
     } else {
@@ -574,8 +592,16 @@ fn complete_and_advance(
     };
 
     if model.settings.notifications_enabled {
-        let body = format!("{} complete. Next: {}", event.completed_phase, event.next_phase);
-        let _ = app.notification().builder().title("Pomodoro update").body(&body).show();
+        let body = format!(
+            "{} complete. Next: {}",
+            event.completed_phase, event.next_phase
+        );
+        let _ = app
+            .notification()
+            .builder()
+            .title("Pomodoro update")
+            .body(&body)
+            .show();
     }
 
     Ok((session, event, model.timer.clone()))
@@ -584,10 +610,12 @@ fn complete_and_advance(
 fn setup_tray(app: &AppHandle) -> AppResult<()> {
     let toggle = MenuItem::with_id(app, "toggle", "Start / Pause", true, None::<&str>)
         .map_err(|e| e.to_string())?;
-    let skip = MenuItem::with_id(app, "skip", "Skip phase", true, None::<&str>).map_err(|e| e.to_string())?;
+    let skip = MenuItem::with_id(app, "skip", "Skip phase", true, None::<&str>)
+        .map_err(|e| e.to_string())?;
     let open = MenuItem::with_id(app, "open", "Open dashboard", true, None::<&str>)
         .map_err(|e| e.to_string())?;
-    let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>).map_err(|e| e.to_string())?;
+    let quit =
+        MenuItem::with_id(app, "quit", "Quit", true, None::<&str>).map_err(|e| e.to_string())?;
 
     let menu = Menu::with_items(app, &[&toggle, &skip, &open, &quit]).map_err(|e| e.to_string())?;
 
@@ -664,7 +692,11 @@ fn tray_skip_timer(app: &AppHandle) -> AppResult<()> {
     Ok(())
 }
 
-fn timer_start_inner(app: &AppHandle, state: &AppState, payload: Option<StartTimerRequest>) -> AppResult<TimerState> {
+fn timer_start_inner(
+    app: &AppHandle,
+    state: &AppState,
+    payload: Option<StartTimerRequest>,
+) -> AppResult<TimerState> {
     let timer = {
         let mut model = state.model.lock().map_err(|e| e.to_string())?;
         refresh_remaining(&mut model.timer);
@@ -713,7 +745,11 @@ fn timer_pause_inner(app: &AppHandle, state: &AppState) -> AppResult<TimerState>
     Ok(timer)
 }
 
-fn timer_resume_inner(app: &AppHandle, state: &AppState, payload: Option<StartTimerRequest>) -> AppResult<TimerState> {
+fn timer_resume_inner(
+    app: &AppHandle,
+    state: &AppState,
+    payload: Option<StartTimerRequest>,
+) -> AppResult<TimerState> {
     let timer = {
         let mut model = state.model.lock().map_err(|e| e.to_string())?;
         if let Some(payload) = payload {
@@ -999,7 +1035,12 @@ fn remote_handle_connection(app: &AppHandle, mut stream: std::net::TcpStream) {
     let header_end = match header_end {
         Some(v) => v,
         None => {
-            write_response(&mut stream, "400 Bad Request", "text/plain; charset=utf-8", b"bad request");
+            write_response(
+                &mut stream,
+                "400 Bad Request",
+                "text/plain; charset=utf-8",
+                b"bad request",
+            );
             return;
         }
     };
@@ -1009,7 +1050,12 @@ fn remote_handle_connection(app: &AppHandle, mut stream: std::net::TcpStream) {
     let _parsed = match req.parse(&buf[..filled]) {
         Ok(Status::Complete(n)) => n,
         _ => {
-            write_response(&mut stream, "400 Bad Request", "text/plain; charset=utf-8", b"bad request");
+            write_response(
+                &mut stream,
+                "400 Bad Request",
+                "text/plain; charset=utf-8",
+                b"bad request",
+            );
             return;
         }
     };
@@ -1041,7 +1087,12 @@ fn remote_handle_connection(app: &AppHandle, mut stream: std::net::TcpStream) {
     }
 
     if method.eq_ignore_ascii_case("OPTIONS") {
-        write_response(&mut stream, "204 No Content", "text/plain; charset=utf-8", b"");
+        write_response(
+            &mut stream,
+            "204 No Content",
+            "text/plain; charset=utf-8",
+            b"",
+        );
         return;
     }
 
@@ -1051,15 +1102,28 @@ fn remote_handle_connection(app: &AppHandle, mut stream: std::net::TcpStream) {
         let model = match state.model.lock() {
             Ok(m) => m,
             Err(_) => {
-                write_response(&mut stream, "500 Internal Server Error", "text/plain; charset=utf-8", b"error");
+                write_response(
+                    &mut stream,
+                    "500 Internal Server Error",
+                    "text/plain; charset=utf-8",
+                    b"error",
+                );
                 return;
             }
         };
-        (model.settings.remote_control_enabled, model.settings.remote_control_token.clone())
+        (
+            model.settings.remote_control_enabled,
+            model.settings.remote_control_token.clone(),
+        )
     };
 
     if !remote_enabled {
-        write_response(&mut stream, "404 Not Found", "text/plain; charset=utf-8", b"not found");
+        write_response(
+            &mut stream,
+            "404 Not Found",
+            "text/plain; charset=utf-8",
+            b"not found",
+        );
         return;
     }
 
@@ -1067,7 +1131,12 @@ fn remote_handle_connection(app: &AppHandle, mut stream: std::net::TcpStream) {
     // All API endpoints remain token-protected.
     if method.eq_ignore_ascii_case("GET") && path == "/" {
         let html = remote_html();
-        write_response(&mut stream, "200 OK", "text/html; charset=utf-8", html.as_bytes());
+        write_response(
+            &mut stream,
+            "200 OK",
+            "text/html; charset=utf-8",
+            html.as_bytes(),
+        );
         return;
     }
 
@@ -1075,7 +1144,12 @@ fn remote_handle_connection(app: &AppHandle, mut stream: std::net::TcpStream) {
         .or_else(|| parse_query_param(query, "token"))
         .unwrap_or("");
     if token_got != token_expected {
-        write_response(&mut stream, "401 Unauthorized", "text/plain; charset=utf-8", b"unauthorized");
+        write_response(
+            &mut stream,
+            "401 Unauthorized",
+            "text/plain; charset=utf-8",
+            b"unauthorized",
+        );
         return;
     }
 
@@ -1084,7 +1158,9 @@ fn remote_handle_connection(app: &AppHandle, mut stream: std::net::TcpStream) {
     let json = match (method, path) {
         ("GET", "/api/state") => match timer_get_state_inner(state.inner()) {
             Ok(v) => serde_json::to_vec(&v).ok(),
-            Err(e) => Some(serde_json::to_vec(&serde_json::json!({ "error": e })).unwrap_or_default()),
+            Err(e) => {
+                Some(serde_json::to_vec(&serde_json::json!({ "error": e })).unwrap_or_default())
+            }
         },
         ("POST", "/api/toggle") => {
             let current = timer_get_state_inner(state.inner());
@@ -1102,38 +1178,63 @@ fn remote_handle_connection(app: &AppHandle, mut stream: std::net::TcpStream) {
             };
             match next {
                 Ok(v) => serde_json::to_vec(&v).ok(),
-                Err(e) => Some(serde_json::to_vec(&serde_json::json!({ "error": e })).unwrap_or_default()),
+                Err(e) => {
+                    Some(serde_json::to_vec(&serde_json::json!({ "error": e })).unwrap_or_default())
+                }
             }
         }
         ("POST", "/api/start") => {
             let payload = serde_json::from_slice::<StartTimerRequest>(&body).ok();
             match timer_start_inner(app, state.inner(), payload) {
                 Ok(v) => serde_json::to_vec(&v).ok(),
-                Err(e) => Some(serde_json::to_vec(&serde_json::json!({ "error": e })).unwrap_or_default()),
+                Err(e) => {
+                    Some(serde_json::to_vec(&serde_json::json!({ "error": e })).unwrap_or_default())
+                }
             }
         }
         ("POST", "/api/pause") => match timer_pause_inner(app, state.inner()) {
             Ok(v) => serde_json::to_vec(&v).ok(),
-            Err(e) => Some(serde_json::to_vec(&serde_json::json!({ "error": e })).unwrap_or_default()),
+            Err(e) => {
+                Some(serde_json::to_vec(&serde_json::json!({ "error": e })).unwrap_or_default())
+            }
         },
         ("POST", "/api/resume") => {
             let payload = serde_json::from_slice::<StartTimerRequest>(&body).ok();
             match timer_resume_inner(app, state.inner(), payload) {
                 Ok(v) => serde_json::to_vec(&v).ok(),
-                Err(e) => Some(serde_json::to_vec(&serde_json::json!({ "error": e })).unwrap_or_default()),
+                Err(e) => {
+                    Some(serde_json::to_vec(&serde_json::json!({ "error": e })).unwrap_or_default())
+                }
             }
         }
         ("POST", "/api/skip") => match timer_skip_inner(app, state.inner()) {
             Ok(v) => serde_json::to_vec(&v).ok(),
-            Err(e) => Some(serde_json::to_vec(&serde_json::json!({ "error": e })).unwrap_or_default()),
+            Err(e) => {
+                Some(serde_json::to_vec(&serde_json::json!({ "error": e })).unwrap_or_default())
+            }
         },
         _ => None,
     };
 
     match json {
-        Some(body) if !body.is_empty() => write_response(&mut stream, "200 OK", "application/json; charset=utf-8", &body),
-        Some(_) => write_response(&mut stream, "500 Internal Server Error", "text/plain; charset=utf-8", b"error"),
-        None => write_response(&mut stream, "404 Not Found", "text/plain; charset=utf-8", b"not found"),
+        Some(body) if !body.is_empty() => write_response(
+            &mut stream,
+            "200 OK",
+            "application/json; charset=utf-8",
+            &body,
+        ),
+        Some(_) => write_response(
+            &mut stream,
+            "500 Internal Server Error",
+            "text/plain; charset=utf-8",
+            b"error",
+        ),
+        None => write_response(
+            &mut stream,
+            "404 Not Found",
+            "text/plain; charset=utf-8",
+            b"not found",
+        ),
     }
 }
 
@@ -1329,8 +1430,16 @@ fn fetch_sessions(conn: &Connection, range: &AnalyticsRange) -> AppResult<Vec<Se
 
     let mut sessions = Vec::new();
     for row in rows {
-        let (id, started_at, ended_at, phase_raw, duration_sec, completed, interruptions, project_id) =
-            row.map_err(|e| e.to_string())?;
+        let (
+            id,
+            started_at,
+            ended_at,
+            phase_raw,
+            duration_sec,
+            completed,
+            interruptions,
+            project_id,
+        ) = row.map_err(|e| e.to_string())?;
         sessions.push(SessionRecord {
             id,
             started_at,
@@ -1440,7 +1549,10 @@ fn timer_set_context(
 }
 
 #[tauri::command]
-fn session_complete(payload: CompleteSessionRequest, state: State<'_, AppState>) -> AppResult<SessionRecord> {
+fn session_complete(
+    payload: CompleteSessionRequest,
+    state: State<'_, AppState>,
+) -> AppResult<SessionRecord> {
     let model = lock_model(&state)?;
 
     model
@@ -1486,7 +1598,10 @@ fn session_complete(payload: CompleteSessionRequest, state: State<'_, AppState>)
 }
 
 #[tauri::command]
-fn analytics_get_summary(range: AnalyticsRange, state: State<'_, AppState>) -> AppResult<AnalyticsSummary> {
+fn analytics_get_summary(
+    range: AnalyticsRange,
+    state: State<'_, AppState>,
+) -> AppResult<AnalyticsSummary> {
     let model = lock_model(&state)?;
     let sessions = fetch_sessions(&model.conn, &range)?;
 
@@ -1619,7 +1734,10 @@ fn tags_upsert(input: TagInput, state: State<'_, AppState>) -> AppResult<Tag> {
     let id = if let Some(id) = input.id {
         model
             .conn
-            .execute("UPDATE tags SET name = ?1 WHERE id = ?2", params![input.name, id])
+            .execute(
+                "UPDATE tags SET name = ?1 WHERE id = ?2",
+                params![input.name, id],
+            )
             .map_err(|e| e.to_string())?;
         id
     } else {
@@ -1635,12 +1753,16 @@ fn tags_upsert(input: TagInput, state: State<'_, AppState>) -> AppResult<Tag> {
 
     let tag = model
         .conn
-        .query_row("SELECT id, name FROM tags WHERE id = ?1", params![id], |row| {
-            Ok(Tag {
-                id: row.get(0)?,
-                name: row.get(1)?,
-            })
-        })
+        .query_row(
+            "SELECT id, name FROM tags WHERE id = ?1",
+            params![id],
+            |row| {
+                Ok(Tag {
+                    id: row.get(0)?,
+                    name: row.get(1)?,
+                })
+            },
+        )
         .map_err(|e| e.to_string())?;
 
     Ok(tag)
@@ -1773,7 +1895,9 @@ fn settings_update(
 
         // Keep the current phase duration in sync if timer is idle.
         if !model.timer.is_running {
-            model.timer.phase_total_seconds = model.settings.duration_for_phase_seconds(&model.timer.phase);
+            model.timer.phase_total_seconds = model
+                .settings
+                .duration_for_phase_seconds(&model.timer.phase);
             model.timer.remaining_seconds = model.timer.phase_total_seconds;
             model.timer.started_at = None;
             model.timer.target_ends_at = None;
@@ -1797,11 +1921,16 @@ fn reset_all_data(app: AppHandle, state: State<'_, AppState>) -> AppResult<Reset
 
         {
             let tx = model.conn.transaction().map_err(|e| e.to_string())?;
-            tx.execute("DELETE FROM session_tags", []).map_err(|e| e.to_string())?;
-            tx.execute("DELETE FROM sessions", []).map_err(|e| e.to_string())?;
-            tx.execute("DELETE FROM projects", []).map_err(|e| e.to_string())?;
-            tx.execute("DELETE FROM tags", []).map_err(|e| e.to_string())?;
-            tx.execute("DELETE FROM settings", []).map_err(|e| e.to_string())?;
+            tx.execute("DELETE FROM session_tags", [])
+                .map_err(|e| e.to_string())?;
+            tx.execute("DELETE FROM sessions", [])
+                .map_err(|e| e.to_string())?;
+            tx.execute("DELETE FROM projects", [])
+                .map_err(|e| e.to_string())?;
+            tx.execute("DELETE FROM tags", [])
+                .map_err(|e| e.to_string())?;
+            tx.execute("DELETE FROM settings", [])
+                .map_err(|e| e.to_string())?;
             tx.execute(
                 "DELETE FROM sqlite_sequence WHERE name IN ('projects', 'tags', 'sessions')",
                 [],
@@ -1825,7 +1954,10 @@ fn reset_all_data(app: AppHandle, state: State<'_, AppState>) -> AppResult<Reset
 }
 
 #[tauri::command]
-fn session_history(range: AnalyticsRange, state: State<'_, AppState>) -> AppResult<Vec<SessionRecord>> {
+fn session_history(
+    range: AnalyticsRange,
+    state: State<'_, AppState>,
+) -> AppResult<Vec<SessionRecord>> {
     let model = lock_model(&state)?;
     fetch_sessions(&model.conn, &range)
 }

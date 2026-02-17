@@ -53,6 +53,10 @@ Database location:
 
 `~/Library/Application Support/com.user.pomodoro-pulse/pomodoro.db`
 
+## Contributing
+
+PRs and issues are welcome. For bigger changes, please open an issue first. Contribution rules are in `CONTRIBUTING.md` (including a note to avoid adding contributor-name lists to the README).
+
 ## Notes
 
 - This is single-user local software with no authentication.

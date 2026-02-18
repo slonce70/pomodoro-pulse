@@ -1976,9 +1976,12 @@ fn session_history(
 fn get_local_ip() -> Result<String, String> {
     let socket = UdpSocket::bind("0.0.0.0:0").map_err(|e| e.to_string())?;
     socket.connect("8.8.8.8:80").map_err(|e| e.to_string())?;
-    Ok(socket.local_addr().map_err(|e| e.to_string())?.ip().to_string())
+    Ok(socket
+        .local_addr()
+        .map_err(|e| e.to_string())?
+        .ip()
+        .to_string())
 }
-
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {

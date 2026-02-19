@@ -1,5 +1,5 @@
 [package]
-name = "Pomodoro"
+name = "pomodoro-pulse"
 version = "0.1.6"
 description = "Pomodoro analytics app"
 authors = ["kdv1995", "doffyso"]

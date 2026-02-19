@@ -1,8 +1,8 @@
 [package]
-name = "tauri-app"
-version = "0.1.6"
+name = "Pomodoro"
+version = "0.1.7"
 description = "Pomodoro analytics app"
-authors = ["you"]
+authors = ["kdv1995", "doffyso"]
 edition = "2021"
 
 [lib]

@@ -815,9 +815,9 @@ fn bind_remote_listener(port: u16) -> AppResult<TcpListener> {
     let addr = format!("0.0.0.0:{port}");
     let listener = TcpListener::bind(&addr)
         .map_err(|e| format!("remote control server bind failed on {addr}: {e}"))?;
-    listener.set_nonblocking(true).map_err(|e| {
-        format!("remote control server nonblocking setup failed on {addr}: {e}")
-    })?;
+    listener
+        .set_nonblocking(true)
+        .map_err(|e| format!("remote control server nonblocking setup failed on {addr}: {e}"))?;
     Ok(listener)
 }
 
@@ -2129,7 +2129,9 @@ mod tests {
         drop(probe);
 
         let listener = bind_remote_listener(port).expect("expected bind to succeed");
-        let _ = listener.local_addr().expect("listener should have local addr");
+        let _ = listener
+            .local_addr()
+            .expect("listener should have local addr");
     }
 
     #[test]
